@@ -41,6 +41,10 @@ def image_to_base64(image):
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
+# Initialiser session_state
+if 'refresh_key' not in st.session_state:
+    st.session_state.refresh_key = 0
+
 # CSS personnalisé pour le style Grimace TV
 st.markdown("""
 <style>
@@ -84,7 +88,7 @@ st.markdown("""
     }
     
     .grimace-card:hover {
-        transform: scale(1.05);
+        transform: scale(1.02);
         box-shadow: 0 15px 40px rgba(255, 107, 53, 0.3);
     }
     
@@ -165,6 +169,11 @@ st.markdown("""
         background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
         color: white !important;
     }
+    
+    div[data-testid="stImage"] {
+        border-radius: 15px;
+        overflow: hidden;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -179,34 +188,36 @@ tab1, tab2 = st.tabs(["📸 ENVOYER UNE GRIMACE", "📺 VOIR LES GRIMACES"])
 with tab1:
     st.markdown("### 🎭 Partagez votre meilleure grimace !")
     
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        # Upload de photo
-        uploaded_file = st.file_uploader(
-            "📸 Choisissez votre photo de grimace",
-            type=['png', 'jpg', 'jpeg'],
-            help="Glissez-déposez votre photo ou cliquez pour parcourir"
-        )
+    with st.form("grimace_form", clear_on_submit=True):
+        col1, col2 = st.columns([2, 1])
         
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Aperçu de votre grimace", use_container_width=True)
-    
-    with col2:
-        # Formulaire
-        st.markdown("#### Vos infos :")
-        name = st.text_input("🏷️ Prénom / Pseudo", placeholder="Ex: SuperGrimaceur")
-        age = st.number_input("🎂 Âge", min_value=1, max_value=120, value=25)
-        comment = st.text_area(
-            "💬 P'tit commentaire cool",
-            placeholder="Ex: Ma grimace de champion du monde !",
-            height=100
-        )
+        with col1:
+            # Upload de photo
+            uploaded_file = st.file_uploader(
+                "📸 Choisissez votre photo de grimace",
+                type=['png', 'jpg', 'jpeg'],
+                help="Glissez-déposez votre photo ou cliquez pour parcourir"
+            )
+            
+            if uploaded_file is not None:
+                image = Image.open(uploaded_file)
+                st.image(image, caption="Aperçu de votre grimace", use_container_width=True)
+        
+        with col2:
+            # Formulaire
+            st.markdown("#### Vos infos :")
+            name = st.text_input("🏷️ Prénom / Pseudo", placeholder="Ex: SuperGrimaceur")
+            age = st.number_input("🎂 Âge", min_value=1, max_value=120, value=25)
+            comment = st.text_area(
+                "💬 P'tit commentaire cool",
+                placeholder="Ex: Ma grimace de champion du monde !",
+                height=100
+            )
         
         st.markdown("####")
+        submitted = st.form_submit_button("🚀 ENVOYER MA GRIMACE !", use_container_width=True)
         
-        if st.button("🚀 ENVOYER MA GRIMACE !", use_container_width=True):
+        if submitted:
             if uploaded_file is None:
                 st.error("⚠️ Veuillez ajouter une photo !")
             elif not name:
@@ -232,11 +243,8 @@ with tab1:
                 grimaces.append(new_grimace)
                 save_grimaces(grimaces)
                 
-                st.success("🎉 Grimace envoyée avec succès ! Elle apparaît maintenant dans l'onglet TV !")
+                st.success("🎉 Grimace envoyée avec succès ! Allez voir l'onglet TV !")
                 st.balloons()
-                
-                # Réinitialiser (optionnel - Streamlit recharge automatiquement)
-                st.rerun()
 
 # Onglet 2: Voir les grimaces
 with tab2:
@@ -246,10 +254,12 @@ with tab2:
     col1, col2, col3 = st.columns([1, 1, 3])
     with col1:
         if st.button("🔄 Actualiser", use_container_width=True):
+            st.session_state.refresh_key += 1
             st.rerun()
     with col2:
         if st.button("🗑️ Tout Effacer", use_container_width=True):
             save_grimaces([])
+            st.session_state.refresh_key += 1
             st.rerun()
     
     st.markdown("---")
